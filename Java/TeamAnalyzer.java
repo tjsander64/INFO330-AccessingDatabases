@@ -1,4 +1,8 @@
 import java.sql.*;
+import java.util.*;
+
+    // REPO FILE
+    // REPO FILE
 
 public class TeamAnalyzer {
     // All the "against" column suffixes:
@@ -14,12 +18,89 @@ public class TeamAnalyzer {
             print("You must give me six Pokemon to analyze");
             System.exit(-1);
         }
-
         // This bit of JDBC magic I provide as a free gift :-)
         // The rest is up to you.
         try (Connection con = DriverManager.getConnection("jdbc:sqlite:pokemon.db")) {
+
+            /*
+            Analyzing 1
+            Bulbasaur (grass poison) is strong against ['fire', 'flying', 'ice', 'psychic'] but weak against ['electric', 'fairy', 'fight', 'grass', 'water'] */
+
             for (String arg : args) {
-                print("Analyzing " + arg);
+                System.out.println("Analyzing " + arg);
+
+                //had scope problems, just creating structures off the bat
+
+                String result = "";
+                String name = "";
+                List<String> pokemonTypes = new ArrayList<>();
+                Map<Integer, String> typeMap = new HashMap<>(); // this will link the type columns to their output index
+                for(int i = 2; i < types.length; i++) {
+                    typeMap.put(i, types[i]);
+                }
+                List<String> strongList = new ArrayList<>();
+                List<String> weakList = new ArrayList<>();
+
+                // get name
+
+                String sql = "SELECT name" + 
+                             "FROM pokemon" +
+                             "WHERE pokedex_number = " + arg + ";";
+
+                try(Statement statement = con.createStatement()) {
+                    try (ResultSet results = statement.executeQuery(sql)) {
+                        name = results.getString("name");
+                    }
+                }
+
+                result += name; 
+                
+                // get types
+
+                sql = "SELECT pokemon_type.type_id, type.name" + 
+                            "FROM pokemon_type, type" +
+                            "WHERE pokemon_type.pokemon_id = " + arg + 
+                                "AND type.id = pokemon_type.type_id;";
+                
+                try (Statement statement2 = con.createStatement()) {
+                    try (ResultSet results = statement2.executeQuery(sql)) {
+                        while(results.next()) {
+                            pokemonTypes.add(results.getString("name"));
+                        }
+                    }  
+                }
+                result += types.toString();   
+                result += " is strong against ";         
+
+                // get list of strengths, weaknesses
+        
+                      
+                sql = "SELECT * " + 
+                       "FROM against" +
+                       "WHERE type_source_id1 = " + pokemonTypes.get(0) +
+                        " AND type_source_id2 = " + pokemonTypes.get(1) + ";";
+                    
+
+                 try (Statement statement3 = con.createStatement()) {
+                        try (ResultSet results = statement3.executeQuery(sql)) {
+                            while(results.next()) {
+                                for(int i = 2; i < 20; i++) {
+                                    Double currVal = results.getDouble(i);
+                                    String currType = typeMap.get(i);
+                                    if (currVal > 1) {
+                                        strongList.add(currType);
+                                    } else if (currVal < 1) {
+                                        weakList.add(currType);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                result += strongList.toString();
+                result += " but weak against " + weakList.toString();
+
+                System.out.println(result);
 
                 // Analyze the pokemon whose pokedex_number is in "arg"
 
@@ -38,6 +119,7 @@ public class TeamAnalyzer {
             }
             else {
                 print("Bye for now!");
+            }
             }
         }        
     }
